@@ -1,0 +1,208 @@
+% Created 2021-10-18 Mon 21:42
+\documentclass[a4paper,12pt]{article}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\usepackage[margin=1.25in]{geometry}
+\usepackage{fourier}
+\usepackage{amsmath}
+\usepackage[scaled]{helvet}
+\linespread{1.10}
+\setlength{\parindent}{0pt} %
+\author{Fusotao Dev Team}
+\date{\today}
+\title{Fusotao Greenbook(Draft) \\ {\small v0.1.2}}
+\hypersetup{
+ pdfauthor={Fusotao Dev Team},
+ pdftitle={Fusotao Greenbook},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 27.2 (Org mode 9.5)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\clearpage
+
+
+\section{Introducation}
+\label{sec:org0c6ec30}
+Fusotao is a set of network protocols which are consisted of either a rule of data consistency or some certain constraints of data modification including not only a transfering constraint but also a matching verification rule. The matching verification sub-protocol, a.k.a Proof of Matching, is the main difference from other blockchains.
+
+\section{Matching System}
+\label{sec:org1040c84}
+Before start introducing Fusotao Protocol, let's take a look at matching system and consider why a matcher's outputs should be verified.
+
+Matching system is a trading platform enables user to pricing orders. The core component of a matching system is a data structure named orderbook which stores all orders according to the price and time, a placed order must follow the sequence to trade if price meets while the owner of an order would be ignored. Usually, to trade on a matching system, users may hande over their account ownership so the matcher can mutate the accounts. In another words, trading on a matcher relies on human trust.
+
+\newtheorem{theorem}{Rule}
+Any data modifications shall obey the rules below:
+\begin{theorem}
+Mutable data shall not be shared, and shared data shall be immutable.
+\end{theorem}
+\begin{theorem}
+There shall be only one associated mutator once data shared.
+\end{theorem}
+
+Compared to the transfering transaction, the matcher as a mutator must modify the orderbook's state for each order rather than just update the states of sender and receiver. So, a matching system is a strict serial system which can be represented by the following procedure:
+\begin{equation*}
+    E_{i} + Orderbook_{i-1} \Rightarrow Orderbook_{i} + R_{i}
+\end{equation*}
+
+Consider an order placed. Let \(x\) be a price, \(y\) be an amount,  \((x_{i}, y_{i})\) be the \(i_{th}\) maker by the order of price and time.
+\begin{equation*}
+    mb_{i}=-y_{i}
+\end{equation*}
+\begin{equation*}
+    tb=\sum\limits_{i} y_{i}
+\end{equation*}
+\begin{equation*}
+    mq_{i}=-x_{i} \times y_{i}
+\end{equation*}
+\begin{equation*}
+    tq=\sum\limits_{i} x_{i} \times y_{i}
+\end{equation*}
+where
+\begin{itemize}
+    \item $matches(x, x_{i})$ is $true$
+\end{itemize}
+
+Blockchain is another typical serial system whose key rule is determining the order of accepted incoming events, e.g. the Bitcoin network uses PoW algorithm and the Longest Chain rule to ensure the unique sequence of transactions. It seems nature to build a matching system on blockchain just like a plain transfer function. But unfortunately, due to the limitation of block capacity and high latency, it is not straightfoward to do it.
+
+An order must occupy 73 bytes at least:
+\begin{equation*}
+ID + Owner + Price + Unfilled + Direction = 73 bytes
+\end{equation*}
+where:
+\begin{itemize}
+    \item $Price$ and $Unfilled$ are 128-bits fixed number
+    \item $ID$ indicates the order
+    \item $Owner$ is the pubkey of user
+    \item $Direction$ is 1-bit direction
+\end{itemize}
+
+Imagine there are tens of thousands of orders in a single orderbook, it is not acceptable to store all orders in the blockchain state machine. But only keeping some essential data to validate the matching results is possible. In the next section, we will introduce how to validate the matching results without holding the whole orderbook.
+
+\section{Global States}
+\label{sec:orga993e4b}
+Sparse Merkle Tree is a full binary hash tree with fixed-depth which can be used for checking whether a node belongs to the tree. A node of Sparse Merkle Tree can be represented by the following function:
+\begin{equation*}
+    \psi_{x} = \lambda(\psi_{xL}, \psi_{xR}), \text{ } height \ne 0
+\end{equation*}
+\begin{equation*}
+    \psi_{x} = v, \text{ } height = 0
+\end{equation*}
+where
+\begin{itemize}
+    \item $x$ is the key of a node calculated by $\lambda(value) >> height$, e.g. $0x00...a82e$
+\end{itemize}
+The capacity of a Sparse Merkle Tree depends on the hash function of the tree, e.g. a Sparse Merkle Tree using Sha256 has \(2^{256}\) leaf nodes with height=256(root excluded).
+Given a data \(v\), we can simply verify whether it belongs to a certain tree by calculating \(height-1\) times hash function:
+
+\noindent\rule{\textwidth}{0.5pt}
+\begin{verbatim}
+let h = hash(v)
+from 0 to 255:
+    do h = hash(h, sibling_of_h)
+return h == root
+\end{verbatim}
+
+\noindent\rule{\textwidth}{0.5pt}
+It is quite simple for validators, but not good for provers. Storing all \(2^{257}\) (intermediate nodes included) nodes is unpractical for any storage system. Consider the distribution of a real Sparse Merkle Tree, most of the leaf nodes are empty, so are the itermediate nodes, that's why we call it sparse. In an empty plain Sparse Merkle Tree, a node at height \(h\) has a certain value:
+\begin{equation*}
+    \psi_{h} = \lambda^{h}(\phi, \phi)
+\end{equation*}
+To avoid precalculate hash for each height, we can redefine the hash function like below:
+\begin{equation*}
+    \lambda(\phi, \phi) = \phi
+\end{equation*}
+\begin{equation*}
+    \lambda(\alpha, \phi) = \lambda(\phi, \alpha)
+\end{equation*}
+
+For data updates, once a leaf node inserted, the nodes along the path would be updated until root. Since we have the first optimization, we can infer that there will be a mount of redundant nodes along the path which can be omitted. e.g. Inserting a single node with key=0xff..ff, value=\(v\) into an empty Sparse Merkle Tree, the parent node key=0x7f..ff would be value=\(v\) either, so are the rest of the nodes along the path.
+
+Back to the matching procedure, since we've done an optimized Sparse Merkle Tree so can encode the orderbook into it and only store the root hash on chain and leave the whole tree to matchers. Once a matcher executes the \(i_{th}\) event off chain and submits the makers at \(i-1_{th}\), we can simply validate the results like above.
+
+Fusotao defines 2 types of key as leaf keys of Sparse Merkle Tree:
+\begin{equation*}
+    orderbook(symbol) = \lambda(1, symbol)
+\end{equation*}
+\begin{equation*}
+    account(currency) = \lambda(0, currency)
+\end{equation*}
+where
+\begin{itemize}
+    \item $currency$ is a 32-bits unsigned number represented currency
+    \item $symbol$ is consisted of $base$ currency and $quote$ currency
+\end{itemize}
+
+There are no keys for encoding orders, instead, the sum of the orderbook's size is enough for validators except the condition that matcher doesn't pick the best makers. In the near future, we may add best price to each orderbook node to get rid of this.
+
+A matcher has a specific global state at the \(i_{th}\) event which can be verified by the leaf values:
+\begin{equation*}
+    orderbook_{i} = ask_{i} << 128 + bid_{i}
+\end{equation*}
+\begin{equation*}
+    account_{i} = available_{i} << 128 + freezed_{i}
+\end{equation*}
+where
+\begin{itemize}
+    \item all numerics are 128-bits represented unsigned fixed number with $scale$=18
+\end{itemize}
+
+\section{Proof of Matching}
+\label{sec:orgd522d7b}
+Given a user-signed event \(E_{i}\) and some merkle paths \(P_{(i-1, j)}\) at \(i-1\), a validator can verify it using matching procedure with well-known root hash \(S_{i-1}\) stored on chain:
+\begin{eqnarray*}
+\sum\limits_{j=0}^{n} belongs(P_{(i-1, j)}, S_{i-1}) = n\\
+P_{(i-1, j)} + E_{i} \Rightarrow S_{i} + P_{(i, j)} \\
+\sum\limits_{j=0}^{n} belongs(P_{(i, j)}, S_{i}) = n
+\end{eqnarray*}
+
+A matcher must maintain a Sparse Merkle Tree and update it every time after event applied. Let \((x, y)\) be an ask-limit order's price and amount of symbol \((b/q)\) as \(i_{th}\) event, \((x_{j}, y_{j})\) be the \(j_{th}\) maker exists at \(i-1\), then the proof generated by matcher would be(fee not included):
+\begin{equation*}
+    account(b)_{(i, j)}=account(b)_{(i-1,j)} + y_{j} << 128
+\end{equation*}
+\begin{equation*}
+    account(q)_{(i, j)}=account(q)_{(i-1,j)} - x_{j} \times y_{j}
+\end{equation*}
+\begin{equation*}
+    account(b)_{i}=account(b)_{i-1} - \sum\limits_{j} y_{j} << 128 + y - \sum\limits_{j} y_{j}
+\end{equation*}
+\begin{equation*}
+    account(q)_{i}=account(q)_{i-1} + \sum\limits_{j} x_{j} \times y_{j} << 128
+\end{equation*}
+\begin{equation*}
+    orderbook(b,q)_{i}=orderbook(b,q)_{i-1} + (y - \sum\limits_{j} y_{j}) << 128 + orderbook(b,q)_{i-1} - \sum\limits_{j} y_{j}
+\end{equation*}
+
+Once verified, the accounts can be mutated on chain and update root hash to \(S_{i}\).
+\section{Substrate Implementation \& Cross-Chain}
+\label{sec:org991c934}
+As an abstract protocol, PoM can either be built on existing blockchains as a series of contracts or run as an independent network. Consider the gas fee and latency, we decide to implement Fusotao protocol by substrate as a permissionless network which permit submitting proofs with zero-cost and low-latency. In this scenario, Fusotao network acts a decentralized infrastructure rather than a specific DEX. Thus, users may not handle over their accounts ownership to a matcher but just authorize the mutation rights.
+
+Substrate is a complete blockchain framework with a set of built-in tools including LevelDB storage, libp2p communication, etc. Especially, the cryptography of Substrate is fully retained in Fusotao runtime which makes it much reliable. In another word, the Sr25519(Schnorrkel/Ristretto x25519) keys for user singature and Ed25519 keys for node signature used in other Substrate-based networks can be recognized in Fusotao network with changing the first type byte of ss58check address to wildcard \(42\). The acceptable Fusotao ss58check address format is shown below:
+
+\begin{equation*}
+address = base58(type+pubkey+checksum)
+\end{equation*}
+
+The Fusotao runtime provides a set of core APIs abount PoM:
+\begin{itemize}
+    \item $claim:$ Claim as a matcher and prover by staking 1\% TAOs of current issurance.
+    \item $prove:$ Submit the original user-signed order and associated proof.
+    \item $grant:$ Authorize a matcher some tokens without transfering ownership.
+    \item $revoke:$ Revoke authorization from a matcher.
+\end{itemize}
+
+As an isolated network, it is necessay to bring existing assets to Fusotao. Inspired by NEAR Rainbow Bridge, Fusotao provides a trustless component bridging to NEAR mainnet called Avatar Messenger. Avatar Messenger is consisted of an off-chain relayer, a built-in pallet in Fusotao runtime as a light client of NEAR and a ownerless contract deployed on NEAR network as a light client of Fusotao. Fortunately, NEAR and Substrate both support Ed25519 signed block, bridging to NEAR is much easier than bridging to Ethereum. Because a finalized block will always be within the canonical chain, which means both clients needn't worry about chain fork and the relayer doesn't have to submit all blocks.
+\end{document}
