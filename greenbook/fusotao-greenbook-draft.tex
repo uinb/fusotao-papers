@@ -76,7 +76,7 @@ Ideally, to implement a matching system on-chain, an order must occupy 73 bytes 
 \begin{equation*}
 ID + Owner + Price + Unfilled + Direction = 73 bytes
 \end{equation*}
-where:\\
+where\\
 \begin{itemize}
     \item $Price$ and $Unfilled$ are 128-bits fixed number
     \item $ID$ indicates the order
@@ -189,5 +189,5 @@ The Fusotao runtime provides a set of core APIs abount PoM:\\
     \item $grant$ Authorize a matcher some tokens without transfering ownership.
     \item $revoke$ Revoke authorization from a matcher.
 \end{itemize}
-As an isolated network, it is necessary to bring existing assets to Fusotao. Inspired by NEAR Rainbow Bridge, Fusotao provides a trustless component bridging to NEAR main net called Avatar Messenger. Avatar Messenger consists of a contract deployed on NEAR network as a light client of Fusotao, a built-in pallet integrated in Fusotao runtime and a relayer holding key pairs of Fusotao and NEAR. Fortunately, NEAR and Substrate both support Ed25519 signed block, bridging to NEAR is much easier than bridging to Ethereum. Because a finalized block will always be within the canonical chain, which means both clients do not need worry about the chain fork, and the relayer doesn’t have to submit all blocks.\\
+As an isolated network, it is necessary to bring existing assets to Fusotao. Inspired by NEAR Rainbow Bridge, Fusotao provides a trustless component bridging to NEAR main net called Avatar Messenger. Avatar Messenger consists of a contract deployed on NEAR network as a light client of Fusotao, a built-in pallet integrated in Fusotao runtime as a NEAR light client and a relayer who is responsible to relay blocks to each others. Fortunately, NEAR and Substrate both support Ed25519 signed block, bridging to NEAR is much easier than bridging to Ethereum. Because a finalized block will always be within the canonical chain, which means both clients do not need worry about the chain fork, and the relayer doesn’t have to submit all blocks.\\
 \end{document}
