@@ -18,10 +18,11 @@
 \usepackage[scaled]{helvet}
 \linespread{1.10}
 \setlength{\parindent}{0pt} %
-\author{Fusotao Dev Team}
-\date{\today}
+\author{UINB Tech}
+\date{2021}
 \title{Fusotao Greenbook(Draft)\\\medskip
-\large v0.2.2}
+  \large v0.2.2\\\medskip
+  \large https//www.fusotao.org}
 \hypersetup{
  pdfauthor={Fusotao Dev Team},
  pdftitle={Fusotao Greenbook(Draft)},
@@ -36,7 +37,7 @@
 
 \section{Introduction}
 \label{sec:org5e9fe25}
-Fusotao is a set of network protocols which are consisted of either a rule of data consistency or some certain constraints of data modification including not only a transferred constraint but also a matching verification rule. The matching verification sub-protocol, a.k.a Proof of Matching, is the main difference from other blockchains.\\
+Fusotao is a set of network protocols which are composed of either a rule of data consistency or some certain constraints of data modification including not only a transfer constraint but also a matching verification rule. The matching verification sub-protocol, a.k.a Proof of Matching, is the main difference from other blockchains.\\
 \section{Matching System}
 \label{sec:org29a156e}
 Before start introducing Fusotao Protocol, let’s take a look at the matching system and consider why a matcher’s outputs should be verified.\\
@@ -188,5 +189,5 @@ The Fusotao runtime provides a set of core APIs abount PoM:\\
     \item $grant$ Authorize a matcher some tokens without transfering ownership.
     \item $revoke$ Revoke authorization from a matcher.
 \end{itemize}
-As an isolated network, it is necessary to bring existing assets to Fusotao. Inspired by NEAR Rainbow Bridge, Fusotao provides a trustless component bridging to NEAR main net called Avatar Messenger. Avatar Messenger consist of contract deployed on NEAR network as a light client of Fusotao. Fortunately, NEAR and Substrate both support Ed25519 signed block, bridging to NEAR is much easier than bridging to Ethereum. Because a finalized block will always be within the canonical chain, which means both clients do not need worry about the chain fork, and the relayer doesn’t have to submit all blocks.\\
+As an isolated network, it is necessary to bring existing assets to Fusotao. Inspired by NEAR Rainbow Bridge, Fusotao provides a trustless component bridging to NEAR main net called Avatar Messenger. Avatar Messenger consists of a contract deployed on NEAR network as a light client of Fusotao, a built-in pallet integrated in Fusotao runtime and a relayer holding key pairs of Fusotao and NEAR. Fortunately, NEAR and Substrate both support Ed25519 signed block, bridging to NEAR is much easier than bridging to Ethereum. Because a finalized block will always be within the canonical chain, which means both clients do not need worry about the chain fork, and the relayer doesn’t have to submit all blocks.\\
 \end{document}
