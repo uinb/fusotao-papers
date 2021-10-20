@@ -177,10 +177,10 @@ A matcher must maintain a Sparse Merkle Tree and update it every time after the 
 Once verified, the accounts can be mutated and update the root hash stored on-chain to \(S_{i}\).\\
 \section{Substrate Implementation \& Cross-Chain}
 \label{sec:orge2652f5}
-As an abstract protocol, PoM can either be built on existing blockchains as a series of contracts or run as an independent network. Considering the gas fee and latency, we decide to implement Fusotao protocol by a substrate as a non-licensed network which permit submitting proofs with zero-cost and low-latency. In this scenario, Fusotao network acts as a decentralized infrastructure rather than a specific DEX, Thus, users may not handle over their account’s ownership to a matcher but just authorize the mutation rights\\
-The substrate is a complete blockchain framework with a set of built-in tools including Level DB storage, libp2p communication, etc. Especially, the cryptography of Substrate is fully retained in Fusotao runtime which makes it much reliable. Therefore, the Sr25519 (Schnorrkel/Ristretto x25519) keys for users’ signature and Ed25519 keys for node signature used in other Substrate-based networks can be recognized in Fusotao network by changing the first type byte of ss58check address to wildcard \(42\). The acceptable Fusotao ss58check address format is shown below:\\
+As an abstract protocol, PoM can either be built on existing blockchains as a series of contracts or run as an independent network. Considering the gas fee and latency, we decide to implement Fusotao protocol over Substrate as a permissionless network which permits submitting proofs with zero-cost and low-latency. In this scenario, Fusotao network acts as a decentralized infrastructure rather than a specific DEX. Thus, users may not handle over their account’s ownership to a matcher but just authorize the mutation rights.\\
+Substrate is a complete blockchain framework with a set of built-in tools including Level DB storage, libp2p communication, etc. Especially, the cryptography of Substrate is fully retained in Fusotao runtime which makes it much reliable. Therefore, the Sr25519 (Schnorrkel/Ristretto x25519) keys for user signature and Ed25519 keys for node signature used in other Substrate-based networks can be recognized in Fusotao network by changing the first type byte of ss58check address to constant \(42\). The acceptable Fusotao ss58check address format is shown below:\\
 \begin{equation*}
-address = base58(type+pubkey+checksum)
+address = base58(type(42)+pubkey(32 bytes)+checksum(2 bytes))
 \end{equation*}
 The Fusotao runtime provides a set of core APIs abount PoM:\\
 \begin{itemize}
