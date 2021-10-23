@@ -95,6 +95,7 @@ Sparse Merkle Tree is a full binary hash tree with fixed-depth which can be used
 \end{equation*}
 where\\
 \begin{itemize}
+    \item $\lambda$ is the hash function, e.g. sha256
     \item $x$ is the key of a node calculated by $\lambda(value) >> height$, e.g. $0x00...a82e$
 \end{itemize}
 The capacity of a Sparse Merkle Tree depends on the hash function of the tree, e.g. a Sparse Merkle Tree using Sha256 has \(2^{256}\) leaf nodes with height=256(root excluded).\\
