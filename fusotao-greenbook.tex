@@ -167,7 +167,7 @@ where\\
   \item all numerics are 128-bits represented unsigned fixed number with $scale$=18
 \end{itemize}
 
-For simplicity, we can define \(a \nabla b\) as \(a << 128 + b\).
+For simplicity, let's define \(a \nabla b\) as \(a << 128 + b\).
 
 \section{Proof of Matching}
 \label{sec:org48d64ef}
@@ -198,5 +198,41 @@ Let \((x, y)\) be an ask-limit order's price and amount of symbol \((b/q)\) as t
 \begin{equation*}
     orderbook(b,q)_{i}=orderbook(b,q)_{i-1} + (y - \sum\limits_{j} y_{j}) \nabla 0 - \sum\limits_{j} y_{j}
 \end{equation*}
-Once verified, the accounts can be mutated following the decoded account leaves and update the root hash stored on-chain to \(S_{i}\).\\
+The equations above are used for verifying the matching procedure with only some essential information by re-calculating on-chain. Once verified, the on-chain accounts state can be updated following the decoded leaves and the root hash stored on-chain to \(S_{i}\).\\
+\section{Tokenomics}
+Unlike some other crypto tokens based on smart contract, TAO is a native token used for paying gas and staking for provers upon Fusotao. Some TAO tokens are pre-minted at the genesis block, including:
+\begin{itemize}
+    \item[*] 8,000,000 for the Fusotao Team (locking)
+    \item[*] 6,000,000 for the Fusotao Foundation (locking)
+    \item[*] 11,500,000 for early investors (8,000,000 in locking state)
+    \item[*] 11,000,000 for the initial liquidity and all incentives before mainnet, e.g. advisors, testnet rewards, bug bounties, community airdrop.
+\end{itemize}
+All accounts of Fusotao have two states $free$ and $reserved$. The most pre-minted TAO tokens at the genesis block are reserved at beginning until the unlocking block comes. The first unlocking block is the $1296000_{th}$ which will unlock 30\% of each reserved account, then 5.8\% will be unlocked automatically in every 432000 blocks after first unlocking event. \\
+Apart from genesis block, anyone can mint TAO tokens from void in two ways:
+\begin{itemize}
+    \item 4109 in every 14400 blocks for Fusotao validator nodes managed by the Octopus Network
+    \item 6575$\sim$21000 in every 14400 blocks for rewards of Proof of Matching before the $26280000_{th}$ block
+\end{itemize}
+Since Fusotao uses the Blind Assignment for Block Extention mechanism(a.k.a. BABE) issued by Parity Team, the validators need to stake some valuable tokens to secure the permissionless network. That's what Octopus Network provides. To run a Fusotao validator node, the maintainer must register on the Octopus Netowork and stake some OCT tokens, and Fusotao network should reward some TAO tokens back. In another word, the security of Fusotao network is leased from the OCT stakers and holders. For more details, please refer to the Octopus Network whitepaper.\\
+Another way is to get the trading rewards on arbitrary provers upon Fusotao. Since every trading command must be verified on chain, the trading volume within a set of blocks is visible and deterministic, we call the set of blocks a Trading Era. The TAO rewards per unit in the $i_{th}$ trading era is:
+\begin{equation*}
+  R_i = \frac{X_{i}}{2\sum\limits t}
+\end{equation*}
+where\\
+\begin{itemize}
+\item $X_i$ is the total TAO to be minted in the $i_{th}$ trading era, \begin{math} $X_i$ \in [6575, 21000] \end{math}
+\item $t$ is the trading volume of a transaction
+\end{itemize}
+The most remarkable usage of TAO tokens is to stake for provers upon Fusotao. The stakers of a prover would earn all the quote currency part of the transaction incomes. E.g. for the pair BTC/USDT, stakers will receive the whole USDT part of the transaction fees while the prover reserve the BTC part.\\
+Like the trading era, the share is based on a set of blocks as well, we call it a season. Currently, a season equals 43200 blocks. The following formula indicates the shares per TAO staked for a prover at the $i_{th}$ season:
+\begin{equation*}
+  S_i = \frac{\sum\limits q \mul f}{\sum\limits t}
+\end{equation*}
+where\\
+\begin{itemize}
+\item $q$ is the trading volume of a transaction
+\item $f$ is the transaction fee ratio
+\item $t$ is the staked TAO from a single account
+\end{itemize}
+
 \end{document}
