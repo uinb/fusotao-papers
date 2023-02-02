@@ -18,7 +18,7 @@
 \usepackage[scaled]{helvet}
 \linespread{1.10}
 \setlength{\parindent}{0pt} %
-\author{UINB Tech}
+\author{Fusotao Dev Team}
 \date{2021}
 \title{Fusotao Greenbook(Draft)\\\medskip
   \large v0.2.3\\\medskip
@@ -40,7 +40,7 @@
 Fusotao is a set of network protocols which are composed of either a rule of data consistency or some certain constraints of data modification including not only a transfer constraint but also a matching verification rule. The matching verification sub-protocol, a.k.a Proof of Matching, is the main difference from other blockchains.\\
 \section{Matching System}
 \label{sec:org29a156e}
-Before start introducing Fusotao Protocol, let’s take a look at the matching system and consider why a matcher’s outputs should be verified.\\
+Before start introducing Fusotao Protocol, let’s view the basic structure of an order matching system and consider why its outputs should be verified.\\
 Matching system is a trading platform that allows users to price orders. The core component of a matching system is a data structure named orderbook which stores all orders that are according to the price and time, and a placed order must follow the sequence to trade if price meets, while the owner of an order would be ignored. Usually, in order to trade on a matching system, users may hand over their account ownership so that the matcher can mutate the accounts, in another word, trading on matchers should reply on human trust.\\
 \newtheorem{theorem}{Rule}\\
 Any data modifications should obey the rules below:\\
@@ -50,7 +50,7 @@ Mutable data should not be shared, and shared data should be immutable.
 \begin{theorem}
 There should be only one associated mutator once data shared.
 \end{theorem}
-Compared to the transfer transaction, the matcher, as a mutator, must modify the orderbook's state for each order rather than just update the states of sender and receiver. Therefore, a matching system is a strict serial system which can be represented by the following procedure:\\
+Compared to the transfer transaction, the matcher, as a mutator, must modify the orderbook's state for each order rather than just update the states of sender and receiver. Therefore, a matching system is a strict serial system which could be simply represented by the following procedure:\\
 \begin{equation*}
     E_{i} + Orderbook_{i-1} \Rightarrow Orderbook_{i} + R_{i}
 \end{equation*}
@@ -69,29 +69,26 @@ Consider an order placed. Let \(x\) be a price, \(y\) be an amount,  \((x_{i}, y
 \end{equation*}
 where\\
 \begin{itemize}
-    \item $matches(x, x_{i})$ is $true$
+    \item $mb_{i}$ represents the base currency account of the $maker_{i}$
+    \item $mq_{i}$ represents the quote currency account of the $maker_{i}$
+    \item $tb$ represents the base currency account of the taker
+    \item $tq$ represents the quote currency account of the taker
 \end{itemize}
 Blockchain is another typical serial system whose key rule is determining the order of all accepted incoming transactions. E.g. the Bitcoin network uses PoW algorithm and the Longest Chain Rule to ensure the global unique sequence of transactions. It seems natural to build a matching system on-chain just like a plain transfer function did. However, due to the limitation of block capacity and high latency, it is not straightforward to do it so.\\
 Ideally, to implement a matching system on-chain, an order must occupy 73 bytes at least:\\
 \begin{equation*}
 ID + Owner + Price + Unfilled + Direction = 73 bytes
 \end{equation*}
-where\\
-\begin{itemize}
-    \item $Price$ and $Unfilled$ are 128-bits fixed number
-    \item $ID$ indicates the order
-    \item $Owner$ is the pubkey of user
-    \item $Direction$ is 1-bit direction
-\end{itemize}
 Imagine there are tens of thousands of orders in a single orderbook, it is not acceptable to store all orders in the blockchain state machine, but only keeping some essential data to validate the matching results is possible. In the next section, we will introduce how to validate the matching results without holding the entire orderbook.\\
 \section{Global States}
 \label{sec:org9b71832}
 Sparse Merkle Tree is a full binary hash tree with fixed-depth which can be used for checking if there is a node belongs to a certain tree. A node of Sparse Merkle Tree can be represented by the following expressions:\\
 \begin{equation*}
-    \psi_{x} = \lambda(\psi_{xL}, \psi_{xR}), \text{ } height \ne 0
-\end{equation*}
-\begin{equation*}
-    \psi_{x} = v, \text{ } height = 0
+    \psi_{x} =
+    \begin{cases}
+      \lambda(\psi_{xL}, \psi_{xR}), \text{ } height \ne 0\\
+      v, \text{ } height = 0\\
+    \end{cases}
 \end{equation*}
 where\\
 \begin{itemize}
@@ -108,7 +105,6 @@ from 0 to 255:
     do h = hash(h, sibling_of_h)
 return h == root
 \end{verbatim}
-
 \noindent\rule{\textwidth}{0.5pt}
 It is quite simple for validators, but it is not good for provers. Storing all \(2^{257}\) (intermediate nodes included) nodes is unpractical for any storage system. Considering the distribution of a real Sparse Merkle Tree, most of the leaf nodes are empty, so are the intermediate nodes, that’s why we call it sparse. In an empty plain Sparse Merkle Tree, a node at height \(h\) has a certain value:\\
 \begin{equation*}
@@ -173,10 +169,18 @@ For simplicity, let's define \(a \nabla b\) as \(a << 128 + b\).
 \label{sec:org48d64ef}
 Given a user-signed event \(E_{i}\) and some merkle paths \(P_{(i-1, j)}\) at \(i-1\), a validator can verify it using a matching procedure with well-known root hash \(S_{i-1}\) stored on-chain:\\
 \begin{eqnarray*}
-\sum\limits_{j=0}^{n} belongs(P_{(i-1, j)}, S_{i-1}) = n\\
+\sum\limits_{j=0}^{n} f(P_{(i-1, j)}, S_{i-1}) = n\\
 P_{(i-1, j)} + E_{i} \Rightarrow S_{i} + P_{(i, j)} \\
-\sum\limits_{j=0}^{n} belongs(P_{(i, j)}, S_{i}) = n
+\sum\limits_{j=0}^{n} f(P_{(i, j)}, S_{i}) = n
 \end{eqnarray*}
+where
+$$
+  f(p, s) =
+  \begin{cases}
+    1, p \in s\\
+    0, p \notin s\\
+  \end{cases}
+$$
 
 A matcher must maintain a Sparse Merkle Tree and update it every time after the event is applied and generate an associated proof which is composed of the origin command and some merkle leaves including value before and after the \(i_{th}\) event executed.\\
 Let \((x, y)\) be an ask-limit order's price and amount of symbol \((b/q)\) as the \(i_{th}\) event, \((x_{j}, y_{j})\) be the \(j_{th}\) maker exists at \(i-1\). Then the proof generated by the matcher should be (Fee excluded):\\
